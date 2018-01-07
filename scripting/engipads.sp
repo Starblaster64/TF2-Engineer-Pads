@@ -1217,6 +1217,14 @@ stock void ClearTimer(Handle &hTimer)
 	}
 }
 
+stock int FindEntityByClassname2(int startEnt, char[] classname)
+{
+	/* If startEnt isn't valid shifting it back to the nearest valid one */
+	while (startEnt > -1 && !IsValidEntity(startEnt)) startEnt--;
+	return FindEntityByClassname(startEnt, classname);
+}
+
+#if !defined _smlib_included
 /* SMLIB
  * Precaches the given particle system.
  * It's best to call this OnMapStart().
@@ -1273,10 +1281,4 @@ stock int FindStringIndex2(int tableidx, char[] str)
 
 	return INVALID_STRING_INDEX;
 }
-
-stock int FindEntityByClassname2(int startEnt, char[] classname)
-{
-	/* If startEnt isn't valid shifting it back to the nearest valid one */
-	while (startEnt > -1 && !IsValidEntity(startEnt)) startEnt--;
-	return FindEntityByClassname(startEnt, classname);
-}
+#endif
