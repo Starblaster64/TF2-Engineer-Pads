@@ -1,0 +1,19 @@
+"Games"
+{
+    "tf"
+    {
+        "Offsets"
+        {
+            "m_hMatchingTeleporter"
+            {
+                "windows"    "4"
+                "linux"      "4"
+			    "mac"        "4"
+            }
+        }
+		"Keys"
+		{
+			"StartProp"		"m_bMatchBuilding"
+		}
+    }
+}

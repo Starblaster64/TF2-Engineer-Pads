@@ -1,0 +1,79 @@
+﻿"Phrases"
+{
+	"padphrase_announcement1"
+	{
+		"en"		"Engineer Pads {blue}v%s{default} by {unique}Starblaster64{default}."
+	}
+	"padphrase_announcement2"
+	{
+		"en"		"Type {olive}/pad{default} to enable/disable building Engineer Pads! Type {olive}/pad_help{default} for more info."
+	}
+	"padphrase_noaccess"
+	{
+		"en"		"You don't have access to build Engineer Pads!"
+	}
+	"padphrase_enabled"
+	{
+		"en"		"Engineer Pads {green}ENABLED{default}!"	
+	}
+	"padphrase_disabled"
+	{
+		"en"		"Engineer Pads {red}DISABLED{default}!"	
+	}
+	"padphrase_menutitle"
+	{
+		"en"		"Engineer Pads Toggle Menu"
+	}
+	"padphrase_menuenable"
+	{
+		"en"		"Enable"
+	}
+	"padphrase_menudisable"
+	{
+		"en"		"Disable"
+	}
+	"padphrase_infotitle"
+	{
+		"en"		"=== Engineer Pads ==="
+	}
+	"padphrase_infogeneral"
+	{
+		"en"		"Engineer Pads replace any Teleporters you build. They have %i HP and cannot be upgraded."
+	}
+	"padphrase_infoboost"
+	{
+		"en"		"Boost Pads: Increases allies movespeed for %.1fs. Cooldown: %.1fs."
+	}
+	"padphrase_infojump"
+	{
+		"en"		"Jump Pads: Launches allies in the direction they're moving. Cooldown: %.1fs."
+	}
+	"padphrase_infoeureka"
+	{
+		"en"		"You use the Eureka Effect to teleport to any Exits if they have been converted to a Pad."
+	}
+	"padphrase_infosniper"
+	{
+		"en"		"You cannot scope in as a Sniper while being launched by a Jump Pad."
+	}
+	"padphrase_infoaiming"
+	{
+		"en"		"You will not be boosted by Boost Pads if you are scoped in/revved up as a Sniper/Heavy."
+	}
+	"padphrase_infoexit"
+	{
+		"en"		"Exit"
+	}
+	"padphrase_deploy"
+	{
+		"en"		"Deploying Pad Type: {teamcolor}%t"
+	}
+	"padphrase_boost"
+	{
+		"en"		"Boost"
+	}
+	"padphrase_jump"
+	{
+		"en"		"Jump"
+	}
+}
