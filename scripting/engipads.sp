@@ -73,12 +73,6 @@ enum //Plugin Enabled states
 	EngiPads_JumpOnly
 }
 
-enum //Menu Exit Enable states
-{
-	EngiPads_MenuExitOff,
-	EngiPads_MenuExitOn
-}
-
 /* Global vars */
 static int g_iPadType[2048];
 static int g_iObjectParticle[2048];
@@ -89,9 +83,6 @@ static int g_iOffsetMatchingTeleporter = -1;
 
 static Handle g_hPadCookie;
 static Handle g_hPadTimerAnnounce;
-
-/* Global bool */
-bool g_bMenuExitEnabled = false;
 
 /* Convars */
 ConVar cvarPads[VersionNumber + 1];
@@ -156,8 +147,6 @@ public void OnPluginStart()
 	cvarPads[BotsCanBuild] = CreateConVar("pads_bots_can_build", "0", "If enabled, Bots will build Boost Pads instead of Teleporters.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	cvarPads[BlockEureka] = CreateConVar("pads_block_eureka", "1", "Toggle blocking Eureka Effect from teleporting to Pads that are Exits.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
-	cvarPads[MenuExit] = CreateConVar("pads_menu_exit_type", "0", "Provides the option for servers to display or hide the exit button.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-
 	AutoExecConfig(true, "engipads");
 	LoadTranslations("engipads.phrases");
 	
@@ -168,7 +157,6 @@ public void OnPluginStart()
 	cvarPads[VersionNumber].AddChangeHook(CvarChange);
 	cvarPads[PadsEnabled].AddChangeHook(CvarChange);
 	cvarPads[PadsAnnounce].AddChangeHook(CvarChange);
-	cvarPads[MenuExit].AddChangeHook(CvarChange);
 	
 	HookEvent("player_death", PlayerDeath, EventHookMode_Post);
 	
@@ -199,12 +187,6 @@ public void OnConfigsExecuted()
 	{
 		g_hPadTimerAnnounce = CreateTimer(cvarPads[PadsAnnounce].FloatValue, Timer_PadsAnnounce, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
-	
-	if (cvarPads[MenuExit].IntValue == EngiPads_MenuExitOff)
-		g_bMenuExitEnabled = false;
-
-	if (cvarPads[MenuExit].IntValue == EngiPads_MenuExitOn || cvarPads[MenuExit].IntValue > EngiPads_MenuExitOn)
-		g_bMenuExitEnabled = true;
 }
 
 public void CvarChange(ConVar cvar, const char[] szOldValue, const char[] szNewValue)
@@ -238,18 +220,6 @@ public void CvarChange(ConVar cvar, const char[] szOldValue, const char[] szNewV
 		{
 			ClearTimer(g_hPadTimerAnnounce);
 		}
-	}
-	
-	else if (cvar == cvarPads[MenuExit])
-	{
-		if (StringToInt(szNewValue) == EngiPads_MenuExitOn && StringToInt(szOldValue) == EngiPads_MenuExitOff)
-			g_bMenuExitEnabled = true;
-
-		else if (StringToInt(szNewValue) == EngiPads_MenuExitOff && StringToInt(szOldValue) == EngiPads_MenuExitOn)
-			g_bMenuExitEnabled = false;
-
-		else if (StringToInt(szNewValue) > EngiPads_MenuExitOn)
-			g_bMenuExitEnabled = true;
 	}
 }
 
@@ -907,11 +877,7 @@ void ShowPadMenu(int iClient)
 	Format(szTranslation, sizeof(szTranslation), "%T", "padphrase_menudisable", iClient);
 	menu.AddItem("off", szTranslation);
 	
-	if (g_bMenuExitEnabled == true)
-		menu.ExitButton = true;
-
-	if (g_bMenuExitEnabled == false)
-		menu.ExitButton = false;
+	menu.ExitButton = true;
 		
 	menu.Display(iClient, MENU_TIME_FOREVER);
 }
@@ -1319,5 +1285,4 @@ stock int FindStringIndex2(int tableidx, char[] str)
 
 	return INVALID_STRING_INDEX;
 }
-
 #endif
