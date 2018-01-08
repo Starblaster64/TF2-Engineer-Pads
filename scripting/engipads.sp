@@ -10,7 +10,7 @@
 //Define version number in a needlessly complex way
 #define MAJOR	"1"
 #define MINOR	"0"
-#define PATCH	"0"
+#define PATCH	"1"
 #define PLUGIN_VERSION	MAJOR..."."...MINOR..."."...PATCH
 
 //Debug "Mode"
@@ -323,7 +323,7 @@ public void ObjectDestroyed(Event event, const char[] name, bool dontBroadcast)
 	
 	int iObjParti = EntRefToEntIndex(g_iObjectParticle[iObj]);
 	if (IsValidEntity(iObjParti))
-		AcceptEntityInput(iObjParti, "Kill");
+		RemoveEntity(iObjParti);
 	g_iObjectParticle[iObj] = -1;
 	
 	#if defined DEBUG
@@ -352,16 +352,19 @@ public Action HookSound(int clients[MAXPLAYERS], int &numClients, char sample[PL
 		int &entity, int &channel, float &volume, int &level, int &pitch, int &flags,
 		char soundEntry[PLATFORM_MAX_PATH], int &seed)
 {
-	char className[64];
-	GetEntityClassname(entity, className, sizeof(className));
-	
-	if (StrEqual(className, "obj_attachment_sapper") && TF2_GetObjectType(entity) == TFObject_Sapper && channel == SNDCHAN_STATIC)
+	if (IsValidEntity(entity))
 	{
-		if (GetEntPropEnt(entity, Prop_Send, "m_hBuiltOnEntity") == -1)
+		char className[64];
+		GetEntityClassname(entity, className, sizeof(className));
+	
+		if (StrEqual(className, "obj_attachment_sapper") && TF2_GetObjectType(entity) == TFObject_Sapper && channel == SNDCHAN_STATIC)
 		{
-			if (StrEqual(sample, "weapons/sapper_timer.wav") || StrContains(sample, "spy_tape") != -1)
+			if (GetEntPropEnt(entity, Prop_Send, "m_hBuiltOnEntity") == -1)
 			{
-				return Plugin_Handled;	//I need to block the duplicate sapping sound otherwise it'll loop forever.
+				if (StrEqual(sample, "weapons/sapper_timer.wav") || StrContains(sample, "spy_tape") != -1)
+				{
+					return Plugin_Handled;	//I need to block the duplicate sapping sound otherwise it'll loop forever.
+				}
 			}
 		}
 	}
@@ -778,7 +781,7 @@ void ConvertPadToTeleporter(int iEnt)
 	int iObjParti = EntRefToEntIndex(g_iObjectParticle[iEnt]);
 	if (IsValidEntity(iObjParti))
 	{
-		AcceptEntityInput(iObjParti, "Kill");
+		RemoveEntity(iObjParti);
 	}
 	g_iObjectParticle[iEnt] = -1;
 	
@@ -874,7 +877,8 @@ void ShowPadMenu(int iClient)
 	Format(szTranslation, sizeof(szTranslation), "%T", "padphrase_menudisable", iClient);
 	menu.AddItem("off", szTranslation);
 	
-	menu.ExitButton = false;
+	menu.ExitButton = true;
+		
 	menu.Display(iClient, MENU_TIME_FOREVER);
 }
 
@@ -1217,6 +1221,14 @@ stock void ClearTimer(Handle &hTimer)
 	}
 }
 
+stock int FindEntityByClassname2(int startEnt, char[] classname)
+{
+	/* If startEnt isn't valid shifting it back to the nearest valid one */
+	while (startEnt > -1 && !IsValidEntity(startEnt)) startEnt--;
+	return FindEntityByClassname(startEnt, classname);
+}
+
+#if !defined _smlib_included
 /* SMLIB
  * Precaches the given particle system.
  * It's best to call this OnMapStart().
@@ -1273,10 +1285,4 @@ stock int FindStringIndex2(int tableidx, char[] str)
 
 	return INVALID_STRING_INDEX;
 }
-
-stock int FindEntityByClassname2(int startEnt, char[] classname)
-{
-	/* If startEnt isn't valid shifting it back to the nearest valid one */
-	while (startEnt > -1 && !IsValidEntity(startEnt)) startEnt--;
-	return FindEntityByClassname(startEnt, classname);
-}
+#endif
