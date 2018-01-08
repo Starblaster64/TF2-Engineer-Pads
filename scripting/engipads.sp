@@ -10,7 +10,7 @@
 //Define version number in a needlessly complex way
 #define MAJOR	"1"
 #define MINOR	"0"
-#define PATCH	"0"
+#define PATCH	"1"
 #define PLUGIN_VERSION	MAJOR..."."...MINOR..."."...PATCH
 
 //Debug "Mode"
