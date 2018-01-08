@@ -50,7 +50,7 @@
 	}
 	"padphrase_infoeureka"
 	{
-		"en"		"You use the Eureka Effect to teleport to any Exits if they have been converted to a Pad."
+		"en"		"You cannot use the Eureka Effect to teleport to any Exits if they have been converted to a Pad."
 	}
 	"padphrase_infosniper"
 	{
