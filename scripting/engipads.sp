@@ -323,7 +323,7 @@ public void ObjectDestroyed(Event event, const char[] name, bool dontBroadcast)
 	
 	int iObjParti = EntRefToEntIndex(g_iObjectParticle[iObj]);
 	if (IsValidEntity(iObjParti))
-		RemoveEntity(iObjParti);
+		AcceptEntityInput(iObjParti, "Kill");
 	g_iObjectParticle[iObj] = -1;
 	
 	#if defined DEBUG
@@ -781,7 +781,7 @@ void ConvertPadToTeleporter(int iEnt)
 	int iObjParti = EntRefToEntIndex(g_iObjectParticle[iEnt]);
 	if (IsValidEntity(iObjParti))
 	{
-		RemoveEntity(iObjParti);
+		AcceptEntityInput(iObjParti, "Kill");
 	}
 	g_iObjectParticle[iEnt] = -1;
 	
