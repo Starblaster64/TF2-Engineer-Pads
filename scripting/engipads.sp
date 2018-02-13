@@ -9,8 +9,8 @@
 
 //Define version number in a needlessly complex way
 #define MAJOR	"1"
-#define MINOR	"0"
-#define PATCH	"2"
+#define MINOR	"1"
+#define PATCH	"0"
 #define PLUGIN_VERSION	MAJOR..."."...MINOR..."."...PATCH
 
 //Debug "Mode"
@@ -58,6 +58,8 @@ enum //CvarName
 	JumpCooldown,
 	BoostDuration,
 	BoostSpeed,
+	BoostDamage,
+	BoostAirblast,
 	BoostBlockAiming,
 	BoostCooldown,
 	BotsCanBuild,
@@ -76,6 +78,8 @@ enum //Plugin Enabled states
 /* Global vars */
 static int g_iPadType[2048];
 static int g_iObjectParticle[2048];
+static int g_iPlayerDamageTaken[MAXPLAYERS + 1];
+static float g_flPlayerBoostEndTime[MAXPLAYERS + 1];
 static PadCond g_fPadCondFlags[MAXPLAYERS + 1];
 
 static char g_szOffsetStartProp[64];
@@ -142,6 +146,8 @@ public void OnPluginStart()
 	cvarPads[JumpCooldown] = CreateConVar("pads_jump_cooldown", "3.0", "How long, in seconds, should Jump Pads take to recharge?", FCVAR_NOTIFY, true, 0.1);
 	cvarPads[BoostDuration] = CreateConVar("pads_boost_duration", "5.0", "How long, in seconds, should Boost Pads boost players for?", FCVAR_NOTIFY, true, 0.0);
 	cvarPads[BoostSpeed] = CreateConVar("pads_boost_speed", "520.0", "What minimum speed should players be boosted to when using Boost Pads?", FCVAR_NOTIFY, true, 0.0);
+	cvarPads[BoostDamage] = CreateConVar("pads_boost_damage_threshold", "35", "How much damage can a boosted player take before losing their boost? 0 to disable.", FCVAR_NOTIFY, true, 0.0);
+	cvarPads[BoostAirblast] = CreateConVar("pads_boost_airblast", "1", "Should boosted players lose their boost when airblasted?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	cvarPads[BoostBlockAiming] = CreateConVar("pads_boost_block_aiming", "1", "Set to 1 to prevent scoped-in/revved up players from being speed boosted.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	cvarPads[BoostCooldown] = CreateConVar("pads_boost_cooldown", "3.0", "How long in seconds should Boost Pads take to recharge?", FCVAR_NOTIFY, true, 0.1);
 	cvarPads[BotsCanBuild] = CreateConVar("pads_bots_can_build", "0", "If enabled, Bots will build Boost Pads instead of Teleporters.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -159,6 +165,7 @@ public void OnPluginStart()
 	cvarPads[PadsAnnounce].AddChangeHook(CvarChange);
 	
 	HookEvent("player_death", PlayerDeath, EventHookMode_Post);
+	HookEvent("player_hurt", PlayerHurt, EventHookMode_Post);
 	
 	HookEvent("player_builtobject", ObjectBuilt, EventHookMode_Post);
 	HookEvent("player_sapped_object", ObjectSapped, EventHookMode_Post);
@@ -167,7 +174,14 @@ public void OnPluginStart()
 	HookEvent("object_destroyed", ObjectDestroyed, EventHookMode_Post);
 	HookEvent("object_removed", ObjectDestroyed, EventHookMode_Post);
 	
+	HookEvent("object_deflected", ObjectDeflected, EventHookMode_Post);
+	
 	AddNormalSoundHook(HookSound);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		OnClientPostAdminCheck(i);
+	}
 }
 
 public void OnPluginEnd()
@@ -274,19 +288,55 @@ public void OnMapEnd()
 
 public void OnClientPostAdminCheck(int iClient)
 {
-	//Reset players' custom conditions on connect
+	//Reset players' global vars on connect/disconnect/death/pluginstart
 	Pad_SetConds(iClient, PadCond_None);
+	g_iPlayerDamageTaken[iClient] = 0;
+	g_flPlayerBoostEndTime[iClient] = 0.0;
 }
 
 public void OnClientDisconnect(int iClient)
 {
-	Pad_SetConds(iClient, PadCond_None);
+	OnClientPostAdminCheck(iClient);
 }
 
 public void PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
-	Pad_SetConds(iClient, PadCond_None);
+	if (IsValidClient(iClient))
+		OnClientPostAdminCheck(iClient);
+}
+
+public void PlayerHurt(Event event, const char[] name, bool dontBroadcast)
+{
+	if (cvarPads[BoostDamage].IntValue <= 0)
+		return;
+	
+	int iVictim = GetClientOfUserId(event.GetInt("userid"));
+	int iAttacker = GetClientOfUserId(event.GetInt("attacker"));
+	int iDamage = event.GetInt("damageamount");
+	
+	if (iAttacker != iVictim && Pad_IsPlayerInCond(iVictim, PadCond_Boost))	//Ignore self damage
+	{
+		g_iPlayerDamageTaken[iVictim] += iDamage;
+		if (g_iPlayerDamageTaken[iVictim] >= cvarPads[BoostDamage].IntValue)
+		{
+			g_flPlayerBoostEndTime[iVictim] = 0.0;
+		}
+	}
+}
+
+public void ObjectDeflected(Event event, const char[] name, bool dontBroadcast)
+{
+	if (!cvarPads[BoostAirblast].BoolValue)
+		return;
+	
+	int iOwner = GetClientOfUserId(event.GetInt("ownerid"));
+	int iWeapon = event.GetInt("weaponid");
+	
+	if (!iWeapon && IsValidClient(iOwner) && Pad_IsPlayerInCond(iOwner, PadCond_Boost))		//0 means ownerid was airblasted
+	{
+		g_flPlayerBoostEndTime[iOwner] = 0.0;
+	}
 }
 
 public void ObjectBuilt(Event event, const char[] name, bool dontBroadcast)
@@ -520,8 +570,9 @@ public Action OnPadTouch(int iPad, int iToucher)
 					TF2_AddCondition(iToucher, TFCond_TeleportedGlow, flDur);
 					Pad_AddCond(iToucher, PadCond_DelayResponse);
 					
-					SDKHook(iToucher, SDKHook_PreThink, PreThink);
-					CreateTimer(flDur, Timer_EndBoostEffect, EntIndexToEntRef(iToucher), TIMER_FLAG_NO_MAPCHANGE);
+					SDKHook(iToucher, SDKHook_PreThink, OnPreThink);
+					g_flPlayerBoostEndTime[iToucher] = GetGameTime() + flDur;
+					g_iPlayerDamageTaken[iToucher] = 0;
 					
 					TF2_SetBuildingState(iPad, TELEPORTER_STATE_RECEIVING_RELEASE);
 					
@@ -586,12 +637,17 @@ public Action OnPadTouch(int iPad, int iToucher)
 }
 
 /* Boost Pad Effects */
-public void PreThink(int iClient)
+public void OnPreThink(int iClient)
 {
-	if (!Pad_IsPlayerInCond(iClient, PadCond_Boost))
+	if (g_flPlayerBoostEndTime[iClient] <= GetGameTime() || !Pad_IsPlayerInCond(iClient, PadCond_Boost))	//If the player's boost duration is over, or they're still hooked without the boost cond.
 	{
 		if (IsPlayerAlive(iClient))
 		{
+			g_flPlayerBoostEndTime[iClient] = 0.0;
+			g_iPlayerDamageTaken[iClient] = 0;
+			Pad_RemoveCond(iClient, PadCond_Boost);
+			TF2_RemoveCondition(iClient, TFCond_TeleportedGlow);
+			TF2_RemoveCondition(iClient, TFCond_SpeedBuffAlly);
 			TF2_AddCondition(iClient, TFCond_SpeedBuffAlly, 0.01);	//Recalc player's speed so they don't keep the boost forever
 			
 			if (Pad_IsPlayerInCond(iClient, PadCond_DelayResponse))
@@ -602,8 +658,12 @@ public void PreThink(int iClient)
 					TF2_SayTeleportResponse(iClient);
 				}
 			}
+			
+			#if defined DEBUG
+			PrintToChatAll("%N's Boost Ended!", iClient);
+			#endif
 		}
-		SDKUnhook(iClient, SDKHook_PreThink, PreThink);
+		SDKUnhook(iClient, SDKHook_PreThink, OnPreThink);
 	}
 	
 	else if (Pad_IsPlayerInCond(iClient, PadCond_Boost))
@@ -615,15 +675,6 @@ public void PreThink(int iClient)
 				SetEntPropFloat(iClient, Prop_Send, "m_flMaxspeed", flBoostSpeed);
 		}
 	}
-}
-
-public Action Timer_EndBoostEffect(Handle hTimer, any iRef)
-{
-	int iClient = EntRefToEntIndex(iRef);
-	
-	Pad_RemoveCond(iClient, PadCond_Boost);
-	
-	return Plugin_Handled;
 }
 
 /* Jump Pad Effects */
